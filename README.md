@@ -1,0 +1,88 @@
+# Volta-Native
+
+Shared native UI for macOS apps, so Swift and C apps look and behave the same. macOS 14 or later, no third-party dependencies.
+
+```sh
+make            # open the Swift gallery, which shows every component
+make c-gallery  # the same controls driven from plain C
+make test
+```
+
+## What's inside
+
+| Component | Swift | C |
+| --- | --- | --- |
+| Design tokens (accent, radius, sizes, opacities, 150ms motion) | `VoltaTokens`, `VoltaDesign` | `volta_tokens.h` |
+| Buttons: standard, prominent, link, destructive | `.buttonStyle(.volta)`, `.voltaProminent`, `.voltaLink` | `volta_button_create` |
+| Icon button with hover outline | `.buttonStyle(.voltaHover)` | |
+| Checkbox | `.toggleStyle(.voltaCheckbox)` | `volta_checkbox_create` |
+| Text and search fields | `VoltaTextField`, `.voltaField()`, `VoltaSearchField` | `volta_text_field_create`, `volta_search_field_create` |
+| Avatar, chip, flow layout, divider, empty state | `VoltaAvatar`, `VoltaChip`, `VoltaFlowLayout`, `VoltaDivider`, `VoltaEmptyState` | avatar, chip, divider |
+| Notes-style rich text editor with HTML export | `RichTextEditor`, `FormattingBar`, `FormatCommands` | |
+| Safe HTML viewer (no JS, strict CSP) | `SafeHTMLView` | |
+| Window behaviour fixes | `WindowChrome` | built into `volta_window_create` |
+
+`.voltaControls()` applies the Volta button and checkbox styles to a whole view tree.
+
+## Using it from Swift
+
+```swift
+// Package.swift
+.package(url: "https://github.com/<owner>/volta-native", branch: "main")
+// target dependency: .product(name: "VoltaNative", package: "volta-native")
+
+import VoltaNative
+
+struct SettingsView: View {
+    @State private var name = ""
+    @State private var sync = true
+    var body: some View {
+        VStack(alignment: .leading) {
+            VoltaTextField("Name", text: $name)
+            Toggle("Sync", isOn: $sync)
+            Button("Save") {}.buttonStyle(.voltaProminent)
+        }
+        .voltaControls()
+        .voltaAccent(.blue) // optional: per-app or per-view accent
+    }
+}
+```
+
+## Using it from C
+
+Build the library with `make c-lib`, then compile against `include/` and link `libVoltaNativeC.dylib`. See `Examples/CGallery/main.c` for a full app.
+
+```c
+#include "volta_native.h"
+
+static void save(void *ctx) { /* ... */ }
+
+int main(void) {
+    volta_app_init("My App");
+    volta_view page = volta_stack_create(true, 12);
+    volta_view field = volta_text_field_create("Name", 300, NULL, NULL);
+    volta_stack_add(page, field);
+    volta_view button = volta_button_create("Save", VOLTA_BUTTON_PROMINENT, save, NULL);
+    volta_stack_add(page, button);
+    volta_view_release(button);
+
+    volta_window window = volta_window_create("My App", 480, 320);
+    volta_window_set_content(window, page);
+    volta_window_show(window);
+    volta_app_run();
+}
+```
+
+The C controls are the same SwiftUI components, hosted in `NSView`s, so C and Swift apps can't drift apart. Call the API on the main thread. `@_cdecl` is an officially unsupported Swift attribute, but it's widely used and stable in practice.
+
+## Design tokens
+
+`tokens/tokens.json` is the source of truth. After editing it, run `make tokens` to regenerate `Sources/VoltaNative/Tokens.swift` and `include/volta_tokens.h`, and commit both. A test fails if they're out of date. Toolkits other than AppKit (for example GTK or Win32 apps) can read the same JSON.
+
+## Design principles
+
+All components follow [docs/design-principles.md](docs/design-principles.md): consistent native controls, hover feedback only on clickable things, 150ms animations, no size change on hover, no selectable text in controls, and click masks that follow borders.
+
+## Origin
+
+Extracted from FireMail. Rich text attributes are namespaced `Volta.style`, `Volta.list` and `Volta.quote` instead of FireMail's `FireMail.*`. If FireMail switches to this package, drafts it saved earlier need their attribute keys migrated.
