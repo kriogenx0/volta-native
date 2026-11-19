@@ -12,6 +12,8 @@ public enum VoltaTokens {
     public static let sizeFieldHeight: CGFloat = 36.0
     public static let sizeCheckbox: CGFloat = 16.0
     public static let sizeAvatar: CGFloat = 34.0
+    public static let sizeKnob: CGFloat = 52.0
+    public static let sizeKnobTrack: CGFloat = 2.5
     public static let spacingControlHorizontal: CGFloat = 14.0
     public static let spacingControlVertical: CGFloat = 6.0
     public static let spacingFieldHorizontal: CGFloat = 10.0
@@ -23,5 +25,6 @@ public enum VoltaTokens {
     public static let opacityControlFill: Double = 0.08
     public static let opacityControlFillHover: Double = 0.16
     public static let opacityControlFillPressed: Double = 0.24
+    public static let opacityPanelFill: Double = 0.04
     public static let motionDuration: Double = 0.15
 }

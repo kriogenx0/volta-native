@@ -24,6 +24,7 @@ enum GallerySection: String, CaseIterable, Identifiable {
     case buttons = "Buttons"
     case checkboxes = "Checkboxes"
     case fields = "Fields"
+    case knobs = "Knobs and panels"
     case display = "Avatars and chips"
     case empty = "Empty state"
     case richText = "Rich text"
@@ -36,6 +37,7 @@ enum GallerySection: String, CaseIterable, Identifiable {
         case .buttons: return "button.horizontal"
         case .checkboxes: return "checkmark.square"
         case .fields: return "character.cursor.ibeam"
+        case .knobs: return "dial.medium"
         case .display: return "person.crop.circle"
         case .empty: return "tray"
         case .richText: return "textformat"
@@ -100,6 +102,7 @@ struct GalleryView: View {
                     case .buttons: ScrollView { ButtonsDemo().padding(24) }
                     case .checkboxes: ScrollView { CheckboxesDemo().padding(24) }
                     case .fields: ScrollView { FieldsDemo().padding(24) }
+                    case .knobs: ScrollView { KnobsDemo().padding(24) }
                     case .display: ScrollView { DisplayDemo().padding(24) }
                     case .empty: VoltaEmptyState(icon: "tray", title: "Nothing here yet", subtitle: "Views with no content show this instead of a blank pane.")
                     case .richText: RichTextDemo()
@@ -244,6 +247,41 @@ struct FieldsDemo: View {
         }
         DemoGroup("Search field", note: "The clear button appears once there is text.") {
             VoltaSearchField("Search", text: $search).frame(maxWidth: 360)
+        }
+    }
+}
+
+struct KnobsDemo: View {
+    @State private var mix = 0.5
+    @State private var pitch = 0.0
+    @State private var cutoff = 1_000.0
+    @State private var gate = 75.0
+
+    private let mixSpec = KnobSpec(range: 0...1, defaultValue: 1, step: 0.01, displayScale: 100, unitSuffix: "%")
+    private let pitchSpec = KnobSpec(range: -24...24, defaultValue: 0, step: 1, unitSuffix: " st", showsSign: true)
+    private let cutoffSpec = KnobSpec(range: 20...20_000, defaultValue: 1_000, step: 1, unitSuffix: " Hz", isLogarithmic: true)
+    private let gateSpec = KnobSpec(range: 0...100, defaultValue: 100, step: 1, unitSuffix: "%")
+
+    var body: some View {
+        DemoGroup("Knobs", note: "Drag up or down (Option for fine), scroll, or use the arrow keys. Double-click resets. Click the value to type one.") {
+            HStack(spacing: 12) {
+                VoltaKnob("Mix", spec: mixSpec, value: $mix)
+                VoltaKnob("Pitch", spec: pitchSpec, value: $pitch)
+                VoltaKnob("Cutoff", spec: cutoffSpec, value: $cutoff)
+                VoltaKnob("Gate", spec: gateSpec, value: $gate).disabled(true)
+            }
+        }
+        DemoGroup("Panel", note: "Groups a plugin section: hairline border, faint fill, no shadow.") {
+            VStack(alignment: .leading, spacing: 10) {
+                VoltaSectionLabel("Replay")
+                HStack(spacing: 12) {
+                    VoltaKnob("Mix", spec: mixSpec, value: $mix)
+                    VoltaKnob("Pitch", spec: pitchSpec, value: $pitch)
+                }
+                Button("Replay Now") {}.buttonStyle(.voltaProminent)
+            }
+            .voltaPanel()
+            .fixedSize()
         }
     }
 }

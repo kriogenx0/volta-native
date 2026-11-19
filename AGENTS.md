@@ -15,6 +15,7 @@ Volta-Native is the shared native UI library for macOS apps written in Swift or 
 - `Sources/VoltaNative/`: SwiftUI components. Everything an app uses is `public`.
 - `Sources/VoltaNativeC/CAPI.swift` + `include/volta_native.h`: the C API. Every `@_cdecl` name must match a header declaration, and a test checks this.
 - `Sources/VoltaGallery/` and `Examples/CGallery/`: apps that show every component.
+- `juce/`: header-only JUCE `LookAndFeel` (`volta::juce` CMake target) using the same generated tokens. Its light and dark `Palette` mirrors the AppKit system colours the Swift side uses; change both together.
 
 ## Conventions
 

@@ -21,6 +21,9 @@ make test
 | Notes-style rich text editor with HTML export | `RichTextEditor`, `FormattingBar`, `FormatCommands` | |
 | Safe HTML viewer (no JS, strict CSP) | `SafeHTMLView` | |
 | Window behaviour fixes | `WindowChrome` | built into `volta_window_create` |
+| Knob (drag, scroll, arrow keys, double-click reset, typed values) | `VoltaKnob`, `KnobSpec` | |
+| Panel and section label for plugin sections | `.voltaPanel()`, `VoltaSectionLabel` | |
+| JUCE look (knobs, sliders, buttons, checkboxes, menus, fields; follows light and dark) | | `juce/include/volta/VoltaLookAndFeel.h` |
 
 `.voltaControls()` applies the Volta button and checkbox styles to a whole view tree.
 
@@ -74,6 +77,31 @@ int main(void) {
 ```
 
 The C controls are the same SwiftUI components, hosted in `NSView`s, so C and Swift apps can't drift apart. Call the API on the main thread. `@_cdecl` is an officially unsupported Swift attribute, but it's widely used and stable in practice.
+
+## Using it from JUCE
+
+The `juce/` folder is a header-only `LookAndFeel_V4` for JUCE plugins, built from the same tokens (`include/volta_tokens.h`). It follows macOS light and dark mode.
+
+```cmake
+FetchContent_Declare(VoltaNative GIT_REPOSITORY https://github.com/kriogenx0/volta-native.git GIT_TAG main)
+FetchContent_MakeAvailable(VoltaNative)   # after JUCE is available
+target_link_libraries(MyPlugin PRIVATE volta::juce)
+```
+
+```cpp
+#include <volta/VoltaLookAndFeel.h>
+
+// In the editor: declare `volta::VoltaLookAndFeel lnf;` before the child components.
+MyEditor::MyEditor (MyProcessor& p) : AudioProcessorEditor (&p)
+{
+    setLookAndFeel (&lnf);
+    lnf.onAppearanceChanged = [this] { sendLookAndFeelChange(); };
+    volta::VoltaLookAndFeel::makeProminent (triggerButton); // the one primary action
+}
+MyEditor::~MyEditor() { setLookAndFeel (nullptr); }
+```
+
+Rotary sliders draw as Volta knobs (bipolar ranges fill from the centre), `ToggleButton`s as Volta checkboxes, and `TextButton`s as Volta buttons. `lnf.drawPanel()` and `lnf.drawSectionLabel()` draw plugin sections. JUCE has no implicit animation, so hover changes are immediate rather than the 150 ms fade.
 
 ## Design tokens
 
