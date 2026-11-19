@@ -11,7 +11,8 @@
 //
 // It follows macOS light and dark mode. Mark the one primary action in a view with
 // `VoltaLookAndFeel::makeProminent (button)`. Rotary sliders draw as knobs; bipolar ranges
-// (min < 0 < max) fill from the centre.
+// (min < 0 < max) fill from the centre. A slider with its own `rotarySliderFillColourId`
+// draws its value in that colour instead of the accent.
 //
 // JUCE paints without implicit animation, so hover and press changes are immediate rather than
 // the 150 ms fade the SwiftUI components use.
@@ -102,6 +103,14 @@ public:
         return (bool) button.getProperties().getWithDefault (prominentProperty, false);
     }
 
+    /// The colour a slider's value is drawn in: the accent, unless that slider has its own
+    /// `Slider::rotarySliderFillColourId` (for example a per-module colour).
+    juce::Colour valueColour (const juce::Slider& slider) const
+    {
+        return slider.isColourSpecified (juce::Slider::rotarySliderFillColourId)
+            ? slider.findColour (juce::Slider::rotarySliderFillColourId) : accent;
+    }
+
     juce::Font labelFont (bool semibold = false) const
     {
         return juce::Font (juce::FontOptions (labelFontSize, semibold ? juce::Font::bold : juce::Font::plain));
@@ -140,7 +149,7 @@ public:
             juce::Path value;
             value.addCentredArc (centre.x, centre.y, radius, radius, 0.0f,
                                  juce::jmin (originAngle, valueAngle), juce::jmax (originAngle, valueAngle), true);
-            g.setColour (accent.withMultipliedAlpha (alpha));
+            g.setColour (valueColour (slider).withMultipliedAlpha (alpha));
             g.strokePath (value, stroke);
         }
 
@@ -203,7 +212,7 @@ public:
         const auto filled = horizontal
             ? juce::Rectangle<float>::leftTopRightBottom (juce::jmin (origin, sliderPos), track.getY(), juce::jmax (origin, sliderPos), track.getBottom())
             : juce::Rectangle<float>::leftTopRightBottom (track.getX(), juce::jmin (origin, sliderPos), track.getRight(), juce::jmax (origin, sliderPos));
-        g.setColour (accent.withMultipliedAlpha (alpha));
+        g.setColour (valueColour (slider).withMultipliedAlpha (alpha));
         g.fillRoundedRectangle (filled, trackThickness * 0.5f);
 
         const auto thumbCentre = horizontal ? juce::Point<float> (sliderPos, area.getCentreY())
