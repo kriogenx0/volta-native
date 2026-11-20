@@ -65,3 +65,32 @@ final class RichTextBasicsTests: XCTestCase {
         XCTAssertEqual(RichText.unarchive(data)?.string, "Saved")
     }
 }
+
+final class FeedbackTests: XCTestCase {
+    func testSweepStaysInsideTrackAndReturns() {
+        let period = VoltaProgressBar.sweepPeriod
+        XCTAssertEqual(VoltaProgressBar.sweepOffset(at: 0), 0, accuracy: 1e-9)
+        XCTAssertEqual(VoltaProgressBar.sweepOffset(at: period / 2), 1 - VoltaProgressBar.sweepLength, accuracy: 1e-9)
+        XCTAssertEqual(VoltaProgressBar.sweepOffset(at: period), 0, accuracy: 1e-9)
+        for step in 0...100 {
+            let offset = VoltaProgressBar.sweepOffset(at: Double(step) * period / 37)
+            XCTAssertGreaterThanOrEqual(offset, 0)
+            XCTAssertLessThanOrEqual(offset + VoltaProgressBar.sweepLength, 1 + 1e-9)
+        }
+    }
+
+    func testSpinnerBrightestArmLeadsAndOthersFade() {
+        XCTAssertEqual(VoltaSpinner.armOpacity(arm: 3, step: 3), 1)
+        XCTAssertGreaterThan(VoltaSpinner.armOpacity(arm: 2, step: 3), VoltaSpinner.armOpacity(arm: 1, step: 3))
+        XCTAssertEqual(VoltaSpinner.armOpacity(arm: 4, step: 3), 0.15, "The arm just ahead is the dimmest")
+        XCTAssertEqual(VoltaSpinner.armOpacity(arm: 11, step: 0), VoltaSpinner.armOpacity(arm: 0, step: 1))
+    }
+
+    func testToneRawValuesMatchCHeader() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let header = try String(contentsOf: root.appendingPathComponent("include/volta_native.h"), encoding: .utf8)
+        for tone in VoltaTone.allCases {
+            XCTAssertTrue(header.contains("VOLTA_TONE_\(String(describing: tone).uppercased()) = \(tone.rawValue)"), "\(tone)")
+        }
+    }
+}

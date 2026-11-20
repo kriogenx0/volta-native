@@ -14,6 +14,12 @@ public enum VoltaTokens {
     public static let sizeAvatar: CGFloat = 34.0
     public static let sizeKnob: CGFloat = 52.0
     public static let sizeKnobTrack: CGFloat = 2.5
+    public static let sizeSwitchWidth: CGFloat = 32.0
+    public static let sizeSwitchHeight: CGFloat = 18.0
+    public static let sizeStatusDot: CGFloat = 8.0
+    public static let sizeProgressHeight: CGFloat = 5.0
+    public static let sizeSpinner: CGFloat = 20.0
+    public static let sizeTextAreaHeight: CGFloat = 96.0
     public static let spacingControlHorizontal: CGFloat = 14.0
     public static let spacingControlVertical: CGFloat = 6.0
     public static let spacingFieldHorizontal: CGFloat = 10.0

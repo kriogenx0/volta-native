@@ -24,6 +24,8 @@ enum GallerySection: String, CaseIterable, Identifiable {
     case buttons = "Buttons"
     case checkboxes = "Checkboxes"
     case fields = "Fields"
+    case choices = "Switches and choices"
+    case status = "Status and progress"
     case knobs = "Knobs and panels"
     case display = "Avatars and chips"
     case empty = "Empty state"
@@ -37,6 +39,8 @@ enum GallerySection: String, CaseIterable, Identifiable {
         case .buttons: return "button.horizontal"
         case .checkboxes: return "checkmark.square"
         case .fields: return "character.cursor.ibeam"
+        case .choices: return "switch.2"
+        case .status: return "gauge.with.dots.needle.33percent"
         case .knobs: return "dial.medium"
         case .display: return "person.crop.circle"
         case .empty: return "tray"
@@ -102,6 +106,8 @@ struct GalleryView: View {
                     case .buttons: ScrollView { ButtonsDemo().padding(24) }
                     case .checkboxes: ScrollView { CheckboxesDemo().padding(24) }
                     case .fields: ScrollView { FieldsDemo().padding(24) }
+                    case .choices: ScrollView { ChoicesDemo().padding(24) }
+                    case .status: ScrollView { StatusDemo().padding(24) }
                     case .knobs: ScrollView { KnobsDemo().padding(24) }
                     case .display: ScrollView { DisplayDemo().padding(24) }
                     case .empty: VoltaEmptyState(icon: "tray", title: "Nothing here yet", subtitle: "Views with no content show this instead of a blank pane.")
@@ -235,6 +241,7 @@ struct FieldsDemo: View {
     @State private var email = "ada@example.com"
     @State private var password = ""
     @State private var search = ""
+    @State private var notes = ""
 
     var body: some View {
         DemoGroup("Text fields", note: "The border is the click mask. Hover outlines it and focus colors it with the accent.") {
@@ -247,6 +254,94 @@ struct FieldsDemo: View {
         }
         DemoGroup("Search field", note: "The clear button appears once there is text.") {
             VoltaSearchField("Search", text: $search).frame(maxWidth: 360)
+        }
+        DemoGroup("Text area", note: "Same chrome as a text field, for multi-line input.") {
+            VoltaTextArea("Notes", text: $notes, prompt: "Add a note").frame(maxWidth: 360)
+        }
+    }
+}
+
+enum Density: String, CaseIterable { case compact = "Compact", regular = "Regular", spacious = "Spacious" }
+
+struct ChoicesDemo: View {
+    @State private var notifications = true
+    @State private var sounds = false
+    @State private var view = "list"
+    @State private var density = Density.regular
+    @State private var sort = "date"
+
+    private let views = [VoltaOption("List", value: "list", symbol: "list.bullet"),
+                         VoltaOption("Grid", value: "grid", symbol: "square.grid.2x2"),
+                         VoltaOption("Columns", value: "columns", symbol: "rectangle.split.3x1")]
+    private let sorts = [VoltaOption("Date", value: "date"), VoltaOption("Name", value: "name"),
+                         VoltaOption("Size", value: "size"), VoltaOption("Kind", value: "kind")]
+
+    var body: some View {
+        DemoGroup("Switches", note: "For settings that apply at once. The whole row is the click target.") {
+            VStack(alignment: .leading, spacing: 2) {
+                Toggle("Notifications", isOn: $notifications).toggleStyle(.voltaSwitch)
+                Toggle("Play sounds", isOn: $sounds).toggleStyle(.voltaSwitch)
+                Toggle("Disabled", isOn: .constant(true)).toggleStyle(.voltaSwitch).disabled(true)
+            }.frame(maxWidth: 320)
+        }
+        DemoGroup("Segmented control", note: "The selected segment is raised; the others darken on hover.") {
+            VoltaSegmentedControl("View", options: views, selection: $view)
+            VoltaSegmentedControl("Density", options: Density.allCases.map { VoltaOption($0.rawValue, value: $0) }, selection: $density)
+            VoltaSegmentedControl("Disabled", options: views, selection: .constant("grid")).disabled(true)
+        }
+        DemoGroup("Radio group") {
+            VoltaRadioGroup("Density", options: Density.allCases.map { VoltaOption($0.rawValue, value: $0) }, selection: $density)
+        }
+        DemoGroup("Select", note: "Opens a native menu with the current choice over the control.") {
+            VoltaSelect("Sort by", options: sorts, selection: $sort).frame(maxWidth: 220)
+            VoltaSelect("Disabled", options: sorts, selection: .constant("name")).frame(maxWidth: 220).disabled(true)
+        }
+    }
+}
+
+struct StatusDemo: View {
+    @State private var progress = 0.35
+
+    var body: some View {
+        DemoGroup("Badges", note: "Info follows the accent. The others keep their meaning in every app.") {
+            HStack(spacing: 8) {
+                VoltaBadge("Draft")
+                VoltaBadge("New", tone: .info)
+                VoltaBadge("Paid", tone: .success)
+                VoltaBadge("Due soon", tone: .warning)
+                VoltaBadge("Overdue", tone: .danger)
+            }
+        }
+        DemoGroup("Status dots") {
+            HStack(spacing: 18) {
+                VoltaStatusDot(.neutral, label: "Idle")
+                VoltaStatusDot(.info, label: "Syncing")
+                VoltaStatusDot(.success, label: "Online")
+                VoltaStatusDot(.warning, label: "Degraded")
+                VoltaStatusDot(.danger, label: "Offline")
+            }
+        }
+        DemoGroup("Messages") {
+            VStack(spacing: 8) {
+                VoltaMessage("Your changes were saved.", tone: .success)
+                VoltaMessage("Remote images are blocked for this message.", tone: .info)
+                VoltaMessage("Storage is almost full.", tone: .warning)
+                VoltaMessage("Couldn't reach the server. Check your connection and try again.", tone: .danger)
+            }.frame(maxWidth: 440)
+        }
+        DemoGroup("Progress", note: "Pass nil while the amount of work is unknown.") {
+            VStack(alignment: .leading, spacing: 12) {
+                VoltaProgressBar(value: progress)
+                Slider(value: $progress, in: 0...1) { Text("Progress") }
+                VoltaProgressBar(value: nil)
+            }.frame(maxWidth: 360)
+        }
+        DemoGroup("Spinners") {
+            HStack(spacing: 20) {
+                VoltaSpinner(size: 14)
+                VoltaSpinner()
+                VoltaSpinner(size: 32)
+            }
         }
     }
 }
@@ -294,6 +389,7 @@ struct DisplayDemo: View {
         ("Travel", "airplane", .purple), ("Important", "exclamationmark.circle", .red), ("Later", "clock", .pink),
     ]
     @State private var width: CGFloat = 320
+    @State private var tags = ["design", "swift", "audio", "macOS"]
 
     var body: some View {
         DemoGroup("Avatars", note: "The tint is picked from the name, so a person always gets the same color.") {
@@ -307,6 +403,17 @@ struct DisplayDemo: View {
                 VoltaChip("Applied", symbol: "tag", color: accent)
                 VoltaChip("Not applied", symbol: "tag", isApplied: false)
                 VoltaChip("No icon", color: .teal)
+            }
+        }
+        DemoGroup("Tags", note: "Values the user added. The remove button darkens on hover.") {
+            HStack(spacing: 6) {
+                ForEach(tags, id: \.self) { tag in
+                    VoltaTag(tag) { withAnimation(VoltaDesign.animation) { tags.removeAll { $0 == tag } } }
+                }
+                VoltaTag("Read-only")
+                if tags.count < 4 {
+                    Button("Reset") { tags = ["design", "swift", "audio", "macOS"] }.buttonStyle(.voltaLink)
+                }
             }
         }
         DemoGroup("Flow layout", note: "Drag the slider to see chips wrap instead of being cut off.") {

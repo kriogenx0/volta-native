@@ -62,6 +62,46 @@ public struct VoltaTextField: View {
     }
 }
 
+/// A multi-line text field with the same chrome as a single-line one. Grows past `minHeight` only if the caller allows it.
+public struct VoltaTextArea: View {
+    let title: String
+    let prompt: String
+    var minHeight: CGFloat
+    @Binding var text: String
+    @FocusState private var focused: Bool
+
+    public init(_ title: String, text: Binding<String>, prompt: String = "", minHeight: CGFloat = VoltaTokens.sizeTextAreaHeight) {
+        self.title = title
+        self._text = text
+        self.prompt = prompt
+        self.minHeight = minHeight
+    }
+
+    public var body: some View {
+        TextEditor(text: $text)
+            .font(.body)
+            .scrollContentBackground(.hidden)
+            .focused($focused)
+            .accessibilityLabel(title)
+            // TextEditor insets its text by about 5pt, so the placeholder and padding match that.
+            .padding(.horizontal, VoltaTokens.spacingFieldHorizontal - 5)
+            .padding(.vertical, VoltaTokens.spacingFieldVertical)
+            .overlay(alignment: .topLeading) {
+                if text.isEmpty {
+                    Text(prompt.isEmpty ? title : prompt)
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, VoltaTokens.spacingFieldHorizontal)
+                        .padding(.vertical, VoltaTokens.spacingFieldVertical)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
+            .voltaFieldSurface(focused: focused)
+            .onTapGesture { focused = true }
+    }
+}
+
 /// A search field with a magnifying glass and a clear button that appears once there is text.
 public struct VoltaSearchField: View {
     let placeholder: String

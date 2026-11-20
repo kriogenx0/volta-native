@@ -51,6 +51,56 @@ public struct VoltaChip: View {
     }
 }
 
+/// A neutral capsule for a value the user added, such as a keyword or recipient. With `onRemove`, it shows a remove button.
+public struct VoltaTag: View {
+    let title: String
+    let onRemove: (() -> Void)?
+
+    public init(_ title: String, onRemove: (() -> Void)? = nil) {
+        self.title = title
+        self.onRemove = onRemove
+    }
+
+    public var body: some View {
+        HStack(spacing: 2) {
+            Text(title).lineLimit(1)
+            if let onRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).frame(width: 16, height: 16)
+                }
+                .buttonStyle(TagRemoveButtonStyle())
+                .help("Remove \(title)")
+                .accessibilityLabel("Remove \(title)")
+            }
+        }
+        .font(.system(size: 12))
+        .foregroundStyle(.secondary)
+        .padding(.leading, 9).padding(.trailing, onRemove == nil ? 9 : 3).padding(.vertical, 3)
+        .background(Color.secondary.opacity(VoltaTokens.opacityControlFillHover), in: Capsule())
+        .textSelection(.disabled)
+    }
+}
+
+/// A round remove button whose fill darkens on hover and press.
+private struct TagRemoveButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { RemoveBody(configuration: configuration) }
+
+    private struct RemoveBody: View {
+        let configuration: Configuration
+        @Environment(\.isEnabled) private var isEnabled
+        @State private var hovering = false
+
+        var body: some View {
+            configuration.label
+                .foregroundStyle(hovering && isEnabled ? Color.primary : Color.secondary)
+                .background(Circle().fill(Color.primary.opacity(configuration.isPressed ? 0.16 : hovering && isEnabled ? 0.10 : 0)))
+                .contentShape(Circle())
+                .onHover { hovering = $0 }
+                .animation(VoltaDesign.animation, value: hovering)
+        }
+    }
+}
+
 /// A centered icon, title and subtitle for views with nothing to show yet.
 public struct VoltaEmptyState: View {
     let icon: String

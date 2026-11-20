@@ -8,6 +8,7 @@ import VoltaNative
 public typealias ActionFn = @convention(c) (UnsafeMutableRawPointer?) -> Void
 public typealias ToggleFn = @convention(c) (UnsafeMutableRawPointer?, Bool) -> Void
 public typealias TextFn = @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<CChar>?) -> Void
+public typealias IndexFn = @convention(c) (UnsafeMutableRawPointer?, Int) -> Void
 
 // MARK: Plumbing
 
@@ -20,12 +21,15 @@ private func onMain<T>(_ body: @MainActor () -> T) -> T {
     return MainActor.assumeIsolated { Unchecked(value: body()) }.value
 }
 
-/// State a hosted control shares with C: enabled, text and on/off.
+/// State a hosted control shares with C: enabled, text, on/off, selected index and progress.
 @MainActor
 final class HostModel: ObservableObject {
     @Published var enabled = true
     @Published var text = ""
     @Published var isOn = false
+    @Published var index = 0
+    var count = 0
+    @Published var progress: Double? = nil
 }
 
 @MainActor
@@ -40,6 +44,13 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 private func string(_ pointer: UnsafePointer<CChar>?) -> String { pointer.map { String(cString: $0) } ?? "" }
+
+private func strings(_ pointer: UnsafePointer<UnsafePointer<CChar>?>?, _ count: Int) -> [String] {
+    guard let pointer, count > 0 else { return [] }
+    return (0..<count).map { string(pointer[$0]) }
+}
+
+private func voltaTone(_ value: Int32) -> VoltaTone { VoltaTone(rawValue: Int(value)) ?? .neutral }
 
 private func retained(_ object: AnyObject) -> UnsafeMutableRawPointer { Unmanaged.passRetained(object).toOpaque() }
 
@@ -241,6 +252,20 @@ public func volta_checkbox_create(_ label: UnsafePointer<CChar>?, _ isOn: Bool, 
     }
 }
 
+@_cdecl("volta_switch_create")
+public func volta_switch_create(_ label: UnsafePointer<CChar>?, _ isOn: Bool, _ onChange: ToggleFn?, _ context: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    let label = string(label)
+    let callback = Callback(context: context)
+    return onMain {
+        let model = HostModel()
+        model.isOn = isOn
+        return host(model) {
+            Toggle(label, isOn: Binding(get: { model.isOn }, set: { model.isOn = $0; onChange?(callback.context, $0) }))
+                .toggleStyle(.voltaSwitch)
+        }
+    }
+}
+
 @_cdecl("volta_checkbox_is_on")
 public func volta_checkbox_is_on(_ checkbox: UnsafeMutableRawPointer?) -> Bool {
     onMain { model(of: checkbox)?.isOn ?? false }
@@ -279,6 +304,20 @@ public func volta_search_field_create(_ placeholder: UnsafePointer<CChar>?, _ wi
     }
 }
 
+@_cdecl("volta_text_area_create")
+public func volta_text_area_create(_ placeholder: UnsafePointer<CChar>?, _ width: Double, _ height: Double, _ onChange: TextFn?, _ context: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    let placeholder = string(placeholder)
+    let callback = Callback(context: context)
+    return onMain {
+        let model = HostModel()
+        let minHeight = height > 0 ? height : VoltaTokens.sizeTextAreaHeight
+        return host(model) {
+            VoltaTextArea(placeholder, text: textBinding(model, onChange, callback), minHeight: minHeight)
+                .frame(width: width, height: minHeight)
+        }
+    }
+}
+
 @_cdecl("volta_field_get_text")
 public func volta_field_get_text(_ field: UnsafeMutableRawPointer?, _ buffer: UnsafeMutablePointer<CChar>?, _ size: Int) -> Int {
     let text = onMain { model(of: field)?.text ?? "" }
@@ -297,6 +336,73 @@ public func volta_field_set_text(_ field: UnsafeMutableRawPointer?, _ text: Unsa
     onMain { model(of: field)?.text = text }
 }
 
+// MARK: Choices
+
+/// Options indexed by position, so C sees plain indexes.
+private func indexedOptions(_ titles: [String]) -> [VoltaOption<Int>] {
+    titles.enumerated().map { VoltaOption($0.element, value: $0.offset) }
+}
+
+@MainActor
+private func choiceModel(_ count: Int, _ selected: Int) -> HostModel {
+    let model = HostModel()
+    model.count = count
+    model.index = selected < count ? selected : 0
+    return model
+}
+
+@MainActor
+private func indexBinding(_ model: HostModel, _ onChange: IndexFn?, _ callback: Callback) -> Binding<Int> {
+    Binding(get: { model.index }, set: { value in
+        guard value != model.index else { return }
+        model.index = value
+        onChange?(callback.context, value)
+    })
+}
+
+@_cdecl("volta_segmented_create")
+public func volta_segmented_create(_ titles: UnsafePointer<UnsafePointer<CChar>?>?, _ count: Int, _ selected: Int, _ onChange: IndexFn?, _ context: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    let options = indexedOptions(strings(titles, count))
+    let callback = Callback(context: context)
+    return onMain {
+        let model = choiceModel(options.count, selected)
+        return host(model) { VoltaSegmentedControl("", options: options, selection: indexBinding(model, onChange, callback)) }
+    }
+}
+
+@_cdecl("volta_radio_group_create")
+public func volta_radio_group_create(_ titles: UnsafePointer<UnsafePointer<CChar>?>?, _ count: Int, _ selected: Int, _ onChange: IndexFn?, _ context: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    let options = indexedOptions(strings(titles, count))
+    let callback = Callback(context: context)
+    return onMain {
+        let model = choiceModel(options.count, selected)
+        return host(model) { VoltaRadioGroup("", options: options, selection: indexBinding(model, onChange, callback)) }
+    }
+}
+
+@_cdecl("volta_select_create")
+public func volta_select_create(_ titles: UnsafePointer<UnsafePointer<CChar>?>?, _ count: Int, _ selected: Int, _ width: Double, _ onChange: IndexFn?, _ context: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    let options = indexedOptions(strings(titles, count))
+    let callback = Callback(context: context)
+    return onMain {
+        let model = choiceModel(options.count, selected)
+        return host(model) { VoltaSelect("", options: options, selection: indexBinding(model, onChange, callback)).frame(width: width) }
+    }
+}
+
+@_cdecl("volta_selection_get")
+public func volta_selection_get(_ choice: UnsafeMutableRawPointer?) -> Int {
+    onMain { model(of: choice)?.index ?? 0 }
+}
+
+@_cdecl("volta_selection_set")
+public func volta_selection_set(_ choice: UnsafeMutableRawPointer?, _ index: Int) {
+    onMain {
+        guard let model = model(of: choice), index >= 0, index < model.count else { return }
+        model.index = index
+    }
+}
+
 // MARK: Display
 
 @_cdecl("volta_avatar_create")
@@ -313,6 +419,61 @@ public func volta_chip_create(_ title: UnsafePointer<CChar>?, _ symbol: UnsafePo
         let accent = Bridge.accent
         return host(HostModel()) { VoltaChip(title, symbol: symbol, color: accent, isApplied: isApplied) }
     }
+}
+
+@_cdecl("volta_badge_create")
+public func volta_badge_create(_ title: UnsafePointer<CChar>?, _ tone: Int32) -> UnsafeMutableRawPointer? {
+    let title = string(title)
+    let tone = voltaTone(tone)
+    return onMain { host(HostModel()) { VoltaBadge(title, tone: tone) } }
+}
+
+@_cdecl("volta_status_dot_create")
+public func volta_status_dot_create(_ tone: Int32, _ label: UnsafePointer<CChar>?) -> UnsafeMutableRawPointer? {
+    let tone = voltaTone(tone)
+    let label = label.map { String(cString: $0) }
+    return onMain { host(HostModel()) { VoltaStatusDot(tone, label: label) } }
+}
+
+@_cdecl("volta_message_create")
+public func volta_message_create(_ text: UnsafePointer<CChar>?, _ tone: Int32, _ width: Double) -> UnsafeMutableRawPointer? {
+    let text = string(text)
+    let tone = voltaTone(tone)
+    return onMain { host(HostModel()) { VoltaMessage(text, tone: tone).frame(width: width) } }
+}
+
+@_cdecl("volta_tag_create")
+public func volta_tag_create(_ title: UnsafePointer<CChar>?, _ onRemove: ActionFn?, _ context: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    let title = string(title)
+    let callback = Callback(context: context)
+    return onMain {
+        host(HostModel()) { VoltaTag(title, onRemove: onRemove.map { remove in { remove(callback.context) } }) }
+    }
+}
+
+// MARK: Progress
+
+@_cdecl("volta_progress_create")
+public func volta_progress_create(_ width: Double) -> UnsafeMutableRawPointer? {
+    onMain {
+        let model = HostModel()
+        return host(model) { ProgressHost(model: model).frame(width: width) }
+    }
+}
+
+private struct ProgressHost: View {
+    @ObservedObject var model: HostModel
+    var body: some View { VoltaProgressBar(value: model.progress) }
+}
+
+@_cdecl("volta_progress_set")
+public func volta_progress_set(_ progress: UnsafeMutableRawPointer?, _ value: Double) {
+    onMain { model(of: progress)?.progress = value < 0 ? nil : value }
+}
+
+@_cdecl("volta_spinner_create")
+public func volta_spinner_create(_ size: Double) -> UnsafeMutableRawPointer? {
+    onMain { host(HostModel()) { VoltaSpinner(size: size > 0 ? size : VoltaTokens.sizeSpinner) } }
 }
 
 // MARK: Any view
