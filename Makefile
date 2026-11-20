@@ -2,7 +2,7 @@
 PROJECT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 SWIFT_ENV := CLANG_MODULE_CACHE_PATH="$(PROJECT_DIR)/.build/ModuleCache" SWIFTPM_MODULECACHE_OVERRIDE="$(PROJECT_DIR)/.build/ModuleCache"
 
-.PHONY: setup gallery c-lib c-gallery test tokens clean help
+.PHONY: setup gallery c-lib c-gallery test tokens clean help rules rules-check
 
 setup:
 	@test "$$(uname -s)" = Darwin || { echo "Volta-Native requires macOS."; exit 1; }
@@ -32,3 +32,13 @@ clean: ## Remove build outputs
 
 help:
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
+
+##@ Agent rules
+
+AGENT_RULES ?= $(HOME)/Sites/agent-rules
+
+rules: ## Sync shared agent rules from agent-rules into docs/rules/
+	@$(AGENT_RULES)/bin/agent-rules sync "$(CURDIR)"
+
+rules-check: ## Show what `make rules` would change (exit 1 if anything)
+	@$(AGENT_RULES)/bin/agent-rules check "$(CURDIR)"

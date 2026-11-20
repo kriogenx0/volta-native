@@ -109,7 +109,11 @@ Rotary sliders draw as Volta knobs (bipolar ranges fill from the centre), `Toggl
 
 ## Design principles
 
-All components follow [docs/design-principles.md](docs/design-principles.md): consistent native controls, hover feedback only on clickable things, 150ms animations, no size change on hover, no selectable text in controls, and click masks that follow borders.
+All components follow the shared [design principles](docs/rules/design-principles.md): consistent native controls, hover feedback only on clickable things, 150ms animations, no size change on hover, no selectable text in controls, and click masks that follow borders.
+
+## Agent rules
+
+`AGENTS.md` loads the shared rules from [kriogenx0/agent-rules](https://github.com/kriogenx0/agent-rules), synced into `docs/rules/` by `make rules` (set `AGENT_RULES` if your checkout isn't at `~/Sites/agent-rules`). This repo's own settings and facts are in `docs/project/`.
 
 ## Origin
 
