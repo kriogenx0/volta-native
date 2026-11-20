@@ -18,6 +18,7 @@ private struct CheckboxBody: View {
     let showsLabel: Bool
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.voltaAccent) private var accent
+    @Environment(\.voltaPalette) private var palette
     @State private var hovering = false
 
     var body: some View {
@@ -26,7 +27,7 @@ private struct CheckboxBody: View {
             HStack(spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: radius).fill(configuration.isOn ? accent : Color.clear)
-                    RoundedRectangle(cornerRadius: radius).strokeBorder(configuration.isOn ? accent : Color.secondary.opacity(0.6), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: radius).strokeBorder(configuration.isOn ? accent : palette.secondary.opacity(0.6), lineWidth: 1)
                     if configuration.isOn { Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)).foregroundStyle(.white) }
                 }.frame(width: VoltaTokens.sizeCheckbox, height: VoltaTokens.sizeCheckbox)
                 if showsLabel { configuration.label }
@@ -34,7 +35,7 @@ private struct CheckboxBody: View {
             .textSelection(.disabled)
             .padding(.horizontal, 6).padding(.vertical, 4)
             .background(RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius)
-                .fill(Color.primary.opacity(hovering && isEnabled ? VoltaDesign.hoverOpacity : 0)))
+                .fill(palette.text.opacity(hovering && isEnabled ? VoltaDesign.hoverOpacity : 0)))
             .contentShape(RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
         }
         .buttonStyle(.plain)

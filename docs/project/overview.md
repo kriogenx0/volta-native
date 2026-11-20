@@ -15,12 +15,13 @@ Volta-Native is the shared native UI library for macOS apps written in Swift or 
 - `Sources/VoltaNative/`: SwiftUI components. Everything an app uses is `public`.
 - `Sources/VoltaNativeC/CAPI.swift` + `include/volta_native.h`: the C API. Every `@_cdecl` name must match a header declaration, and a test checks this.
 - `Sources/VoltaGallery/` and `Examples/CGallery/`: apps that show every component.
-- `juce/`: header-only JUCE `LookAndFeel` (`volta::juce` CMake target) using the same generated tokens. Its light and dark `Palette` mirrors the AppKit system colours the Swift side uses; change both together.
+- `juce/`: header-only JUCE `LookAndFeel` and `ThemeEditor` (`volta::juce` CMake target) using the same generated tokens.
+- `Sources/VoltaNative/Theme.swift` and `juce/include/volta/VoltaLookAndFeel.h` (`volta::Theme`): the theme model on each side. They share one JSON format (`appearance`, `accent`, `canvas`, `surface`, `text`, each colour as `red`/`green`/`blue` 0–1); change both together. The light and dark palettes come from the `light*` and `dark*` colour tokens, which mirror AppKit's system colours.
 
 ### Conventions
 
 - Every new component gets a section in the Swift gallery. If C apps need it, add it to the C API and the C gallery too.
-- Components read the accent from `@Environment(\.voltaAccent)`, never a hard-coded color, so apps can override it.
+- Components read the accent from `@Environment(\.voltaAccent)` and other colours from `@Environment(\.voltaPalette)`, never `Color.primary`, `Color.secondary` or a hard-coded color, so themes apply.
 
 ### After changing code
 

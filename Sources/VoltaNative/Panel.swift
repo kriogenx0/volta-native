@@ -2,12 +2,18 @@ import SwiftUI
 
 public extension View {
     /// A section panel: hairline border, faint fill, no shadow, 12pt padding. Not clickable, so it has no hover state.
-    func voltaPanel() -> some View {
-        padding(12)
-            .background(Color.secondary.opacity(VoltaTokens.opacityPanelFill), in: RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
+    func voltaPanel() -> some View { modifier(PanelSurface()) }
+}
+
+private struct PanelSurface: ViewModifier {
+    @Environment(\.voltaPalette) private var palette
+
+    func body(content: Content) -> some View {
+        content.padding(12)
+            .background(palette.secondary.opacity(VoltaTokens.opacityPanelFill), in: RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
             .overlay {
                 RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius)
-                    .strokeBorder(Color.secondary.opacity(VoltaDesign.boundaryOpacity), lineWidth: 1)
+                    .strokeBorder(palette.secondary.opacity(VoltaDesign.boundaryOpacity), lineWidth: 1)
                     .allowsHitTesting(false)
             }
     }

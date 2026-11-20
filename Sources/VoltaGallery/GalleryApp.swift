@@ -21,6 +21,7 @@ struct GalleryApp: App {
 
 enum GallerySection: String, CaseIterable, Identifiable {
     case tokens = "Tokens"
+    case theme = "Theme"
     case buttons = "Buttons"
     case checkboxes = "Checkboxes"
     case fields = "Fields"
@@ -36,6 +37,7 @@ enum GallerySection: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .tokens: return "swatchpalette"
+        case .theme: return "paintpalette"
         case .buttons: return "button.horizontal"
         case .checkboxes: return "checkmark.square"
         case .fields: return "character.cursor.ibeam"
@@ -50,35 +52,9 @@ enum GallerySection: String, CaseIterable, Identifiable {
     }
 }
 
-enum Accent: String, CaseIterable, Identifiable {
-    case volta = "Volta", blue = "Blue", green = "Green", purple = "Purple"
-    var id: Self { self }
-    var color: Color {
-        switch self {
-        case .volta: return .voltaAccent
-        case .blue: return .blue
-        case .green: return .green
-        case .purple: return .purple
-        }
-    }
-}
-
-enum Appearance: String, CaseIterable, Identifiable {
-    case system = "System", light = "Light", dark = "Dark"
-    var id: Self { self }
-    var scheme: ColorScheme? {
-        switch self {
-        case .system: return nil
-        case .light: return .light
-        case .dark: return .dark
-        }
-    }
-}
-
 struct GalleryView: View {
     @State private var section: GallerySection? = .tokens
-    @State private var accent: Accent = .volta
-    @State private var appearance: Appearance = .system
+    @State private var theme = VoltaTheme.load()
 
     var body: some View {
         NavigationSplitView {
@@ -91,11 +67,8 @@ struct GalleryView: View {
                 HStack(spacing: 16) {
                     Text(section?.rawValue ?? "").font(.title2.weight(.semibold))
                     Spacer()
-                    Picker("Accent", selection: $accent) {
-                        ForEach(Accent.allCases) { Text($0.rawValue).tag($0) }
-                    }.fixedSize()
-                    Picker("Appearance", selection: $appearance) {
-                        ForEach(Appearance.allCases) { Text($0.rawValue).tag($0) }
+                    Picker("Appearance", selection: $theme.appearance) {
+                        ForEach(VoltaTheme.Appearance.allCases) { Text($0.title).tag($0) }
                     }.pickerStyle(.segmented).fixedSize()
                 }
                 .padding(.horizontal, 24).padding(.vertical, 14)
@@ -103,6 +76,7 @@ struct GalleryView: View {
                 Group {
                     switch section ?? .tokens {
                     case .tokens: ScrollView { TokensDemo().padding(24) }
+                    case .theme: ScrollView { ThemeDemo(theme: $theme).padding(24) }
                     case .buttons: ScrollView { ButtonsDemo().padding(24) }
                     case .checkboxes: ScrollView { CheckboxesDemo().padding(24) }
                     case .fields: ScrollView { FieldsDemo().padding(24) }
@@ -117,10 +91,12 @@ struct GalleryView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            .background(VoltaCanvas())
             .voltaControls()
         }
-        .voltaAccent(accent.color)
-        .preferredColorScheme(appearance.scheme)
+        .voltaTheme(theme)
+        .preferredColorScheme(theme.colorScheme)
+        .onChange(of: theme) { _, newTheme in newTheme.save() }
         .background(WindowChrome())
     }
 }
@@ -148,6 +124,27 @@ struct DemoGroup<Content: View>: View {
     }
 }
 
+struct ThemeDemo: View {
+    @Binding var theme: VoltaTheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+        DemoGroup("Theme", note: "System follows macOS light and dark mode. Pick colors to override the appearance's own; the gallery saves the theme with VoltaTheme.save().") {
+            VoltaThemePicker(theme: $theme).frame(maxWidth: 360)
+        }
+        DemoGroup("Preview") {
+            HStack(spacing: 16) {
+                Button("Standard") {}
+                Button("Prominent") {}.buttonStyle(VoltaProminentButtonStyle())
+                Toggle("Checkbox", isOn: .constant(true))
+                VoltaChip("Chip")
+            }
+            .voltaPanel()
+        }
+        }
+    }
+}
+
 struct TokensDemo: View {
     @Environment(\.voltaAccent) private var accent
     private let rows: [(String, String)] = [
@@ -163,7 +160,7 @@ struct TokensDemo: View {
     ]
 
     var body: some View {
-        DemoGroup("Accent", note: "The default comes from tokens.json. Apps and views can override it with .voltaAccent(_:), as the picker above does.") {
+        DemoGroup("Accent", note: "The default comes from tokens.json. Apps and views can override it with .voltaAccent(_:), as the Theme section does.") {
             HStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius).fill(accent).frame(width: 64, height: 40)
                 RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius).fill(Color.voltaAccent).frame(width: 64, height: 40)

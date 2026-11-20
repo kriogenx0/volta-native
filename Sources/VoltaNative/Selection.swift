@@ -32,6 +32,7 @@ public extension ToggleStyle where Self == VoltaSwitchStyle {
 }
 
 private struct SwitchBody: View {
+    @Environment(\.voltaPalette) private var palette
     let configuration: ToggleStyle.Configuration
     let showsLabel: Bool
     @Environment(\.isEnabled) private var isEnabled
@@ -49,7 +50,7 @@ private struct SwitchBody: View {
                     Spacer(minLength: 16)
                 }
                 ZStack(alignment: isOn ? .trailing : .leading) {
-                    Capsule().fill(isOn ? accent : Color.secondary.opacity(hovering && isEnabled ? 0.32 : 0.24))
+                    Capsule().fill(isOn ? accent : palette.secondary.opacity(hovering && isEnabled ? 0.32 : 0.24))
                     Circle().fill(.white)
                         .shadow(color: .black.opacity(0.22), radius: 1, y: 0.5)
                         .padding(2)
@@ -59,7 +60,7 @@ private struct SwitchBody: View {
             .textSelection(.disabled)
             .padding(.horizontal, showsLabel ? 6 : 0).padding(.vertical, showsLabel ? 4 : 0)
             .background(RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius)
-                .fill(Color.primary.opacity(showsLabel && hovering && isEnabled ? VoltaDesign.hoverOpacity : 0)))
+                .fill(palette.text.opacity(showsLabel && hovering && isEnabled ? VoltaDesign.hoverOpacity : 0)))
             .contentShape(RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
         }
         .buttonStyle(.plain)
@@ -75,6 +76,7 @@ private struct SwitchBody: View {
 
 /// A row of mutually exclusive choices. The selected segment sits on a raised surface; others darken their text on hover.
 public struct VoltaSegmentedControl<Value: Hashable>: View {
+    @Environment(\.voltaPalette) private var palette
     let label: String
     let options: [VoltaOption<Value>]
     @Binding var selection: Value
@@ -92,13 +94,14 @@ public struct VoltaSegmentedControl<Value: Hashable>: View {
             }
         }
         .padding(2)
-        .background(Color.secondary.opacity(VoltaTokens.opacityControlFill), in: RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
+        .background(palette.secondary.opacity(VoltaTokens.opacityControlFill), in: RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
         .fixedSize()
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
     }
 
     private struct Segment: View {
+        @Environment(\.voltaPalette) private var palette
         let option: VoltaOption<Value>
         let isSelected: Bool
         let select: () -> Void
@@ -112,11 +115,11 @@ public struct VoltaSegmentedControl<Value: Hashable>: View {
                     if let symbol = option.symbol { Label(option.title, systemImage: symbol) } else { Text(option.title) }
                 }
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(isSelected || (hovering && isEnabled) ? Color.primary : Color.secondary)
+                .foregroundStyle(isSelected || (hovering && isEnabled) ? palette.text : palette.secondary)
                 .padding(.horizontal, 12).padding(.vertical, 4)
                 .background {
                     RoundedRectangle(cornerRadius: radius)
-                        .fill(isSelected ? Color(nsColor: .controlBackgroundColor) : Color.primary.opacity(hovering && isEnabled ? 0.05 : 0))
+                        .fill(isSelected ? palette.surface : palette.text.opacity(hovering && isEnabled ? 0.05 : 0))
                         .shadow(color: .black.opacity(isSelected ? 0.12 : 0), radius: 1, y: 0.5)
                 }
                 .contentShape(RoundedRectangle(cornerRadius: radius))
@@ -157,6 +160,7 @@ public struct VoltaRadioGroup<Value: Hashable>: View {
     }
 
     private struct RadioRow: View {
+        @Environment(\.voltaPalette) private var palette
         let title: String
         let isSelected: Bool
         let select: () -> Void
@@ -170,7 +174,7 @@ public struct VoltaRadioGroup<Value: Hashable>: View {
                 HStack(spacing: 8) {
                     ZStack {
                         Circle().fill(isSelected ? accent : Color.clear)
-                        Circle().strokeBorder(isSelected ? accent : Color.secondary.opacity(0.6), lineWidth: 1)
+                        Circle().strokeBorder(isSelected ? accent : palette.secondary.opacity(0.6), lineWidth: 1)
                         Circle().fill(.white).frame(width: 6, height: 6).opacity(isSelected ? 1 : 0)
                     }.frame(width: size, height: size)
                     Text(title)
@@ -178,7 +182,7 @@ public struct VoltaRadioGroup<Value: Hashable>: View {
                 .textSelection(.disabled)
                 .padding(.horizontal, 6).padding(.vertical, 4)
                 .background(RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius)
-                    .fill(Color.primary.opacity(hovering && isEnabled ? VoltaDesign.hoverOpacity : 0)))
+                    .fill(palette.text.opacity(hovering && isEnabled ? VoltaDesign.hoverOpacity : 0)))
                 .contentShape(RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
             }
             .buttonStyle(.plain)

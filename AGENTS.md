@@ -31,3 +31,7 @@ Settings and facts about this repo (its stack, layout, how to run it, where it d
 
 @docs/project/settings.md
 @docs/project/overview.md
+
+## Features
+
+@docs/features/README.md

@@ -9,7 +9,16 @@
 //     ...
 //     setLookAndFeel (nullptr);                   // in the editor destructor
 //
-// It follows macOS light and dark mode. Mark the one primary action in a view with
+// It follows the system light or dark mode where JUCE can read it (macOS, Windows) and is dark
+// elsewhere. A `volta::Theme` can force light or dark and replace the accent and the canvas,
+// surface and text colours; it saves as the same JSON as the Swift `VoltaTheme`:
+//
+//     lnf.setTheme (volta::Theme::fromJSON (savedJSON));
+//     savedJSON = lnf.getTheme().toJSON();
+//
+// `volta::ThemeEditor` is a small component that lets a person pick these.
+//
+// It follows macOS light and dark mode by default. Mark the one primary action in a view with
 // `VoltaLookAndFeel::makeProminent (button)`. Rotary sliders draw as knobs; bipolar ranges
 // (min < 0 < max) fill from the centre. A slider with its own `rotarySliderFillColourId`
 // draws its value in that colour instead of the accent.
@@ -21,15 +30,21 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
+#include <optional>
 
 #include "volta_tokens.h"
 
 namespace volta
 {
 
-/// Appearance-dependent colours. The SwiftUI side reads these from macOS system colours;
-/// JUCE can't, so they are mirrored here. Keep them in step with AppKit's
-/// textBackgroundColor, controlBackgroundColor and labelColor.
+inline juce::Colour tokenColour (double r, double g, double b)
+{
+    return juce::Colour::fromFloatRGBA ((float) r, (float) g, (float) b, 1.0f);
+}
+
+/// Appearance-dependent colours, from the light and dark tokens (tokens/tokens.json). Those mirror
+/// AppKit's textBackgroundColor, controlBackgroundColor, labelColor and secondaryLabelColor, which
+/// the SwiftUI side uses directly when it follows the system.
 struct Palette
 {
     juce::Colour canvas;    // window background
@@ -37,9 +52,38 @@ struct Palette
     juce::Colour text;      // primary text
     juce::Colour secondary; // labels, units, borders are drawn from this at token opacities
 
-    static Palette light() { return { juce::Colour (0xffffffff), juce::Colour (0xffffffff), juce::Colour (0xff1d1d1f), juce::Colour (0xff86868b) }; }
-    static Palette dark()  { return { juce::Colour (0xff1e1e1e), juce::Colour (0xff2a2a2a), juce::Colour (0xffe6e6e6), juce::Colour (0xff98989d) }; }
+    static Palette light()
+    {
+        return { tokenColour (VOLTA_COLOR_LIGHT_CANVAS_RED, VOLTA_COLOR_LIGHT_CANVAS_GREEN, VOLTA_COLOR_LIGHT_CANVAS_BLUE),
+                 tokenColour (VOLTA_COLOR_LIGHT_SURFACE_RED, VOLTA_COLOR_LIGHT_SURFACE_GREEN, VOLTA_COLOR_LIGHT_SURFACE_BLUE),
+                 tokenColour (VOLTA_COLOR_LIGHT_TEXT_RED, VOLTA_COLOR_LIGHT_TEXT_GREEN, VOLTA_COLOR_LIGHT_TEXT_BLUE),
+                 tokenColour (VOLTA_COLOR_LIGHT_SECONDARY_RED, VOLTA_COLOR_LIGHT_SECONDARY_GREEN, VOLTA_COLOR_LIGHT_SECONDARY_BLUE) };
+    }
+
+    static Palette dark()
+    {
+        return { tokenColour (VOLTA_COLOR_DARK_CANVAS_RED, VOLTA_COLOR_DARK_CANVAS_GREEN, VOLTA_COLOR_DARK_CANVAS_BLUE),
+                 tokenColour (VOLTA_COLOR_DARK_SURFACE_RED, VOLTA_COLOR_DARK_SURFACE_GREEN, VOLTA_COLOR_DARK_SURFACE_BLUE),
+                 tokenColour (VOLTA_COLOR_DARK_TEXT_RED, VOLTA_COLOR_DARK_TEXT_GREEN, VOLTA_COLOR_DARK_TEXT_BLUE),
+                 tokenColour (VOLTA_COLOR_DARK_SECONDARY_RED, VOLTA_COLOR_DARK_SECONDARY_GREEN, VOLTA_COLOR_DARK_SECONDARY_BLUE) };
+    }
 };
+
+/// True when the system can report light or dark mode. Elsewhere Volta uses dark.
+inline bool systemAppearanceAvailable()
+{
+   #if JUCE_MAC || JUCE_WINDOWS
+    return true;
+   #else
+    return false;
+   #endif
+}
+
+/// The system's dark mode, or true where it can't be read.
+inline bool systemIsDark()
+{
+    return systemAppearanceAvailable() ? juce::Desktop::getInstance().isDarkModeActive() : true;
+}
 
 inline juce::Colour defaultAccent()
 {
@@ -51,6 +95,99 @@ inline juce::Colour defaultAccent()
 inline juce::Colour boundary (const Palette& p) { return p.secondary.withAlpha ((float) VOLTA_OPACITY_BOUNDARY); }
 inline juce::Colour divider  (const Palette& p) { return p.secondary.withAlpha ((float) VOLTA_OPACITY_DIVIDER); }
 inline juce::Colour hover    (const Palette& p) { return p.text.withAlpha ((float) VOLTA_OPACITY_HOVER); }
+
+/// The colours a person can choose, plus light or dark. Unset colours keep the appearance's own,
+/// so a theme can change only the accent. Saves to the same JSON as the Swift `VoltaTheme`.
+struct Theme
+{
+    enum class Appearance { system, light, dark };
+
+    Appearance appearance = Appearance::system;
+    juce::Colour accent = defaultAccent();
+    std::optional<juce::Colour> canvas, surface, text;
+
+    bool hasCustomColours() const noexcept { return canvas || surface || text; }
+
+    /// Whether this theme draws dark, given the system's current setting.
+    bool isDark (bool systemDark) const noexcept
+    {
+        switch (appearance)
+        {
+            case Appearance::light: return false;
+            case Appearance::dark:  return true;
+            case Appearance::system: break;
+        }
+        return systemDark;
+    }
+
+    /// The colours to draw with. A custom text colour also sets secondary: the text at 60% over the canvas.
+    Palette resolve (bool systemDark) const
+    {
+        auto p = isDark (systemDark) ? Palette::dark() : Palette::light();
+        if (canvas)  p.canvas = *canvas;
+        if (surface) p.surface = *surface;
+        if (text)
+        {
+            p.text = *text;
+            p.secondary = p.canvas.interpolatedWith (*text, 0.6f);
+        }
+        return p;
+    }
+
+    bool operator== (const Theme& other) const noexcept
+    {
+        return appearance == other.appearance && accent == other.accent
+            && canvas == other.canvas && surface == other.surface && text == other.text;
+    }
+    bool operator!= (const Theme& other) const noexcept { return ! operator== (other); }
+
+    //==============================================================================
+    // Saving: {"appearance":"dark","accent":{"red":1,"green":0.4,"blue":0.2},"canvas":{...}}
+
+    static juce::var colourToVar (juce::Colour c)
+    {
+        auto* o = new juce::DynamicObject();
+        o->setProperty ("red", (double) c.getFloatRed());
+        o->setProperty ("green", (double) c.getFloatGreen());
+        o->setProperty ("blue", (double) c.getFloatBlue());
+        return juce::var (o);
+    }
+
+    static std::optional<juce::Colour> colourFromVar (const juce::var& v)
+    {
+        if (! v.isObject() || ! v.hasProperty ("red") || ! v.hasProperty ("green") || ! v.hasProperty ("blue"))
+            return std::nullopt;
+        auto channel = [&v] (const char* name) { return juce::jlimit (0.0, 1.0, (double) v.getProperty (name, 0.0)); };
+        return tokenColour (channel ("red"), channel ("green"), channel ("blue"));
+    }
+
+    juce::var toVar() const
+    {
+        auto* o = new juce::DynamicObject();
+        o->setProperty ("appearance", appearance == Appearance::light ? "light" : appearance == Appearance::dark ? "dark" : "system");
+        o->setProperty ("accent", colourToVar (accent));
+        if (canvas)  o->setProperty ("canvas", colourToVar (*canvas));
+        if (surface) o->setProperty ("surface", colourToVar (*surface));
+        if (text)    o->setProperty ("text", colourToVar (*text));
+        return juce::var (o);
+    }
+
+    /// Missing or unreadable values fall back to the defaults, so older or newer saves still load.
+    static Theme fromVar (const juce::var& v)
+    {
+        Theme t;
+        const auto a = v.getProperty ("appearance", "system").toString();
+        t.appearance = a == "light" ? Appearance::light : a == "dark" ? Appearance::dark : Appearance::system;
+        if (auto c = colourFromVar (v.getProperty ("accent", {}))) t.accent = *c;
+        t.canvas  = colourFromVar (v.getProperty ("canvas", {}));
+        t.surface = colourFromVar (v.getProperty ("surface", {}));
+        t.text    = colourFromVar (v.getProperty ("text", {}));
+        return t;
+    }
+
+    juce::String toJSON() const { return juce::JSON::toString (toVar(), true); }
+    static Theme fromJSON (const juce::String& json) { return fromVar (juce::JSON::parse (json)); }
+};
 
 class VoltaLookAndFeel : public juce::LookAndFeel_V4,
                          private juce::DarkModeSettingListener
@@ -67,10 +204,17 @@ public:
     std::function<void()> onAppearanceChanged;
 
     explicit VoltaLookAndFeel (juce::Colour accentColour = defaultAccent())
-        : accent (accentColour)
+    {
+        theme.accent = accentColour;
+        juce::Desktop::getInstance().addDarkModeSettingListener (this);
+        applyTheme();
+    }
+
+    explicit VoltaLookAndFeel (const Theme& initialTheme)
+        : theme (initialTheme)
     {
         juce::Desktop::getInstance().addDarkModeSettingListener (this);
-        applyPalette (juce::Desktop::getInstance().isDarkModeActive());
+        applyTheme();
     }
 
     ~VoltaLookAndFeel() override
@@ -83,13 +227,32 @@ public:
 
     void setAccent (juce::Colour newAccent)
     {
-        accent = newAccent;
-        applyPalette (dark);
+        auto t = theme;
+        t.accent = newAccent;
+        setTheme (t);
     }
 
-    /// Forces light or dark instead of following macOS. Mostly for tests and screenshots.
-    void setDarkMode (bool shouldBeDark) { applyPalette (shouldBeDark); }
+    /// Forces light or dark instead of following the system.
+    void setDarkMode (bool shouldBeDark)
+    {
+        auto t = theme;
+        t.appearance = shouldBeDark ? Theme::Appearance::dark : Theme::Appearance::light;
+        setTheme (t);
+    }
+
     bool isDark() const noexcept { return dark; }
+
+    const Theme& getTheme() const noexcept { return theme; }
+
+    /// Applies `newTheme`, refreshes every window and calls `onAppearanceChanged`.
+    void setTheme (const Theme& newTheme)
+    {
+        if (newTheme == theme)
+            return;
+        theme = newTheme;
+        applyTheme();
+        refreshComponents();
+    }
 
     /// Draws `button` as the view's one primary action: accent fill, white semibold text.
     static void makeProminent (juce::Button& button, bool prominent = true)
@@ -424,14 +587,21 @@ public:
 private:
     static constexpr const char* prominentProperty = "volta-prominent";
 
+    Theme theme;
     Palette colours = Palette::dark();
-    juce::Colour accent;
+    juce::Colour accent = defaultAccent();
     bool dark = true;
 
     void darkModeSettingChanged() override
     {
-        applyPalette (juce::Desktop::getInstance().isDarkModeActive());
+        if (theme.appearance != Theme::Appearance::system)
+            return;
+        applyTheme();
+        refreshComponents();
+    }
 
+    void refreshComponents()
+    {
         auto& desktop = juce::Desktop::getInstance();
         for (int i = 0; i < desktop.getNumComponents(); ++i)
             if (auto* c = desktop.getComponent (i))
@@ -441,10 +611,12 @@ private:
             onAppearanceChanged();
     }
 
-    void applyPalette (bool shouldBeDark)
+    void applyTheme()
     {
-        dark = shouldBeDark;
-        colours = dark ? Palette::dark() : Palette::light();
+        const bool systemDark = systemIsDark();
+        dark = theme.isDark (systemDark);
+        colours = theme.resolve (systemDark);
+        accent = theme.accent;
 
         setColourScheme (dark ? getDarkColourScheme() : getLightColourScheme());
 
