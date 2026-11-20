@@ -12,13 +12,14 @@ public extension View {
 private struct FieldSurface: ViewModifier {
     let focused: Bool
     @Environment(\.voltaAccent) private var accent
+    @Environment(\.voltaPalette) private var palette
 
     func body(content: Content) -> some View {
         content
-            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
             .overlay {
                 RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius)
-                    .strokeBorder(focused ? accent : Color.secondary.opacity(0.28), lineWidth: 1)
+                    .strokeBorder(focused ? accent : palette.secondary.opacity(0.28), lineWidth: 1)
                     .allowsHitTesting(false)
             }
             .contentShape(RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))

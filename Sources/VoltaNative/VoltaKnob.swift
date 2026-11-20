@@ -23,6 +23,7 @@ public struct VoltaKnob: View {
 
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.voltaAccent) private var accent
+    @Environment(\.voltaPalette) private var palette
     @State private var lastDragY: CGFloat?
     @State private var isHovering = false
     @State private var scrollMonitor: Any?
@@ -61,16 +62,16 @@ public struct VoltaKnob: View {
         let active = isHovering && isEnabled
         return ZStack {
             arc(from: 0, to: Self.sweep)
-                .stroke(Color.secondary.opacity(active ? VoltaDesign.dividerOpacity : VoltaTokens.opacityControlFillHover),
+                .stroke(palette.secondary.opacity(active ? VoltaDesign.dividerOpacity : VoltaTokens.opacityControlFillHover),
                         style: StrokeStyle(lineWidth: Self.trackWidth, lineCap: .round))
             valueArc
                 .stroke(accent, style: StrokeStyle(lineWidth: Self.trackWidth, lineCap: .round))
             Circle()
-                .fill(Color(nsColor: .controlBackgroundColor))
-                .overlay(Circle().strokeBorder(Color.secondary.opacity(VoltaDesign.boundaryOpacity * 2), lineWidth: 1))
+                .fill(palette.surface)
+                .overlay(Circle().strokeBorder(palette.secondary.opacity(VoltaDesign.boundaryOpacity * 2), lineWidth: 1))
                 .padding(8)
             Capsule()
-                .fill(Color.primary.opacity(0.8))
+                .fill(palette.text.opacity(0.8))
                 .frame(width: 2, height: Self.diameter * 0.18)
                 .offset(y: -Self.diameter * 0.2)
                 .rotationEffect(.degrees(-135 + 270 * normalized))

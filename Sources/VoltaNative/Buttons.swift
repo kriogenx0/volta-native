@@ -7,6 +7,7 @@ struct VoltaButtonBody: View {
     let kind: Kind
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.voltaAccent) private var accent
+    @Environment(\.voltaPalette) private var palette
     @State private var hovering = false
 
     private var destructive: Bool { configuration.role == .destructive }
@@ -28,7 +29,7 @@ struct VoltaButtonBody: View {
             .overlay {
                 if kind == .standard {
                     RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius)
-                        .strokeBorder(Color.secondary.opacity(active ? 0.5 : 0.28), lineWidth: 1)
+                        .strokeBorder(palette.secondary.opacity(active ? 0.5 : 0.28), lineWidth: 1)
                 }
             }
             .opacity(isEnabled ? (kind == .link && active ? 0.75 : 1) : VoltaDesign.disabledOpacity)
@@ -42,7 +43,7 @@ struct VoltaButtonBody: View {
         switch kind {
         case .prominent: return .white
         case .link: return tint
-        case .standard: return destructive ? .red : .primary
+        case .standard: return destructive ? .red : palette.text
         }
     }
 
@@ -51,7 +52,7 @@ struct VoltaButtonBody: View {
         switch kind {
         case .prominent: return tint.opacity(pressed ? 0.7 : active ? 0.88 : 1)
         default:
-            return Color.secondary.opacity(pressed ? VoltaTokens.opacityControlFillPressed
+            return palette.secondary.opacity(pressed ? VoltaTokens.opacityControlFillPressed
                 : active ? VoltaTokens.opacityControlFillHover : VoltaTokens.opacityControlFill)
         }
     }
@@ -78,13 +79,20 @@ public struct VoltaLinkButtonStyle: ButtonStyle {
 /// For icon buttons: no bezel, an outline on hover and a fill on press.
 public struct VoltaHoverButtonStyle: ButtonStyle {
     public init() {}
-    public func makeBody(configuration: Configuration) -> some View {
+    public func makeBody(configuration: Configuration) -> some View { HoverButtonBody(configuration: configuration) }
+}
+
+private struct HoverButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    @Environment(\.voltaPalette) private var palette
+
+    var body: some View {
         configuration.label
             .textSelection(.disabled)
             .contentShape(RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius))
             .background {
                 RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius)
-                    .fill(Color.primary.opacity(configuration.isPressed ? 0.10 : 0))
+                    .fill(palette.text.opacity(configuration.isPressed ? 0.10 : 0))
             }
             .voltaInteractiveHover()
     }

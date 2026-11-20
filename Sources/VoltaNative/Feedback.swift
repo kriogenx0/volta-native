@@ -106,6 +106,7 @@ public struct VoltaMessage: View {
 
 /// A thin accent bar. Pass `nil` while the amount of work is unknown and a segment sweeps back and forth.
 public struct VoltaProgressBar: View {
+    @Environment(\.voltaPalette) private var palette
     let value: Double?
     @Environment(\.voltaAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -129,7 +130,7 @@ public struct VoltaProgressBar: View {
         GeometryReader { proxy in
             let width = proxy.size.width
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.secondary.opacity(0.16))
+                Capsule().fill(palette.secondary.opacity(0.16))
                 if let value {
                     Capsule().fill(accent).frame(width: width * min(max(value, 0), 1))
                         .animation(VoltaDesign.animation, value: value)
@@ -155,6 +156,7 @@ public struct VoltaProgressBar: View {
 
 /// Twelve fading arms, for short waits where a progress bar would be too much.
 public struct VoltaSpinner: View {
+    @Environment(\.voltaPalette) private var palette
     var size: CGFloat
 
     public init(size: CGFloat = VoltaTokens.sizeSpinner) { self.size = size }
@@ -173,7 +175,7 @@ public struct VoltaSpinner: View {
             ZStack {
                 ForEach(0..<Self.arms, id: \.self) { arm in
                     Capsule()
-                        .fill(Color.secondary)
+                        .fill(palette.secondary)
                         .frame(width: max(1.5, size * 0.09), height: size * 0.27)
                         .offset(y: -size * 0.31)
                         .rotationEffect(.degrees(Double(arm) * 360 / Double(Self.arms)))

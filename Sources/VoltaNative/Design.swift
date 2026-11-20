@@ -15,6 +15,7 @@ public enum VoltaDesign {
 public extension Color {
     /// The default Volta accent. Read `@Environment(\.voltaAccent)` in components so apps and views can override it.
     static let voltaAccent = Color(red: VoltaTokens.colorAccentRed, green: VoltaTokens.colorAccentGreen, blue: VoltaTokens.colorAccentBlue)
+    /// The system window background. Inside `.voltaTheme(_:)`, read `@Environment(\.voltaPalette).canvas` or use `VoltaCanvas()` instead.
     static let voltaCanvas = Color(nsColor: .textBackgroundColor)
 }
 
@@ -53,13 +54,14 @@ public struct VoltaDivider: View {
 
 struct InteractiveHover: ViewModifier {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.voltaPalette) private var palette
     @State private var isHovered = false
 
     func body(content: Content) -> some View {
         content
             .overlay {
                 RoundedRectangle(cornerRadius: VoltaDesign.cornerRadius)
-                    .strokeBorder(Color.primary.opacity(isHovered && isEnabled ? VoltaDesign.hoverOpacity : 0), lineWidth: 1)
+                    .strokeBorder(palette.text.opacity(isHovered && isEnabled ? VoltaDesign.hoverOpacity : 0), lineWidth: 1)
                     .allowsHitTesting(false)
             }
             .onHover { isHovered = $0 }

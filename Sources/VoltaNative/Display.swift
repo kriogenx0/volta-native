@@ -30,6 +30,7 @@ public struct VoltaChip: View {
     let symbol: String?
     let color: Color
     var isApplied: Bool
+    @Environment(\.voltaPalette) private var palette
 
     public init(_ title: String, symbol: String? = nil, color: Color = .voltaAccent, isApplied: Bool = true) {
         self.title = title
@@ -44,15 +45,16 @@ public struct VoltaChip: View {
         }
         .font(.system(size: 10, weight: .medium))
         .padding(.horizontal, 7).padding(.vertical, 3)
-        .foregroundStyle(isApplied ? color : .secondary)
+        .foregroundStyle(isApplied ? color : palette.secondary)
         .background(isApplied ? color.opacity(0.10) : .clear, in: Capsule())
-        .overlay(Capsule().strokeBorder(isApplied ? Color.clear : Color.secondary.opacity(VoltaDesign.boundaryOpacity), lineWidth: 1))
+        .overlay(Capsule().strokeBorder(isApplied ? Color.clear : palette.secondary.opacity(VoltaDesign.boundaryOpacity), lineWidth: 1))
         .textSelection(.disabled)
     }
 }
 
 /// A neutral capsule for a value the user added, such as a keyword or recipient. With `onRemove`, it shows a remove button.
 public struct VoltaTag: View {
+    @Environment(\.voltaPalette) private var palette
     let title: String
     let onRemove: (() -> Void)?
 
@@ -76,7 +78,7 @@ public struct VoltaTag: View {
         .font(.system(size: 12))
         .foregroundStyle(.secondary)
         .padding(.leading, 9).padding(.trailing, onRemove == nil ? 9 : 3).padding(.vertical, 3)
-        .background(Color.secondary.opacity(VoltaTokens.opacityControlFillHover), in: Capsule())
+        .background(palette.secondary.opacity(VoltaTokens.opacityControlFillHover), in: Capsule())
         .textSelection(.disabled)
     }
 }
@@ -86,14 +88,15 @@ private struct TagRemoveButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View { RemoveBody(configuration: configuration) }
 
     private struct RemoveBody: View {
+        @Environment(\.voltaPalette) private var palette
         let configuration: Configuration
         @Environment(\.isEnabled) private var isEnabled
         @State private var hovering = false
 
         var body: some View {
             configuration.label
-                .foregroundStyle(hovering && isEnabled ? Color.primary : Color.secondary)
-                .background(Circle().fill(Color.primary.opacity(configuration.isPressed ? 0.16 : hovering && isEnabled ? 0.10 : 0)))
+                .foregroundStyle(hovering && isEnabled ? palette.text : palette.secondary)
+                .background(Circle().fill(palette.text.opacity(configuration.isPressed ? 0.16 : hovering && isEnabled ? 0.10 : 0)))
                 .contentShape(Circle())
                 .onHover { hovering = $0 }
                 .animation(VoltaDesign.animation, value: hovering)
