@@ -26,6 +26,7 @@ make test
 | Theme: light, dark or system, accent and custom colours, saved as JSON | `VoltaTheme`, `.voltaTheme(_:)`, `VoltaThemePicker`, `VoltaCanvas` | |
 | JUCE look (knobs, sliders, buttons, checkboxes, menus, fields; follows light and dark) | | `juce/include/volta/VoltaLookAndFeel.h` |
 | JUCE theme editor | | `juce/include/volta/VoltaThemeEditor.h` |
+| JUCE knob: name, value, vertical drag, Option for fine, scroll, arrows, double-click reset, typed values | | `juce/include/volta/VoltaKnob.h` (`volta::Knob`) |
 
 `.voltaControls()` applies the Volta button and checkbox styles to a whole view tree.
 
