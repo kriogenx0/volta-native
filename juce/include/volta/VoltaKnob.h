@@ -6,7 +6,8 @@
 //
 // - Name above, value below. Size it with `Knob::preferredWidth` x `Knob::preferredHeight`.
 // - Drag up or down to change it; hold Option (Alt) for fine control.
-// - Scroll over it, or use the arrow keys when it has focus.
+// - Use the arrow keys when it has focus. Scrolling over it doesn't change the value, so a
+//   scrolling view still scrolls; call `knob.slider.setScrollWheelEnabled (true)` to opt in.
 // - Double-click resets to the default (a SliderAttachment sets the default for you).
 // - Click the value to type one. Return or clicking away commits, Escape cancels. Units in the text
 //   are accepted when the parameter's text-to-value function accepts them; out-of-range values clamp,
@@ -34,7 +35,7 @@ public:
         Dial() : juce::Slider (RotaryVerticalDrag, TextBoxBelow)
         {
             setTextBoxIsEditable (true);
-            setScrollWheelEnabled (true);
+            setScrollWheelEnabled (false);   // opt in per knob; see the header comment
             setRepaintsOnMouseActivity (true);
             setWantsKeyboardFocus (true);
             // Holding Option switches to velocity mode at a low sensitivity: fine adjustment.

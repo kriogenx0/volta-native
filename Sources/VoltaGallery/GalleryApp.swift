@@ -355,7 +355,7 @@ struct KnobsDemo: View {
     private let gateSpec = KnobSpec(range: 0...100, defaultValue: 100, step: 1, unitSuffix: "%")
 
     var body: some View {
-        DemoGroup("Knobs", note: "Drag up or down (Option for fine), scroll, or use the arrow keys. Double-click resets. Click the value to type one.") {
+        DemoGroup("Knobs", note: "Drag up or down (Option for fine), or use the arrow keys. Double-click resets. Click the value to type one.") {
             HStack(spacing: 12) {
                 VoltaKnob("Mix", spec: mixSpec, value: $mix)
                 VoltaKnob("Pitch", spec: pitchSpec, value: $pitch)

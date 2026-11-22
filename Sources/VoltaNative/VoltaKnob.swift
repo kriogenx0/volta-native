@@ -4,7 +4,8 @@ import SwiftUI
 /// A knob for one continuous parameter, in the Volta style (ported from Dicer's `KnobView`).
 ///
 /// - Drag up or down to change it; hold Option for fine control.
-/// - Scroll over it, or use the arrow keys when it has focus.
+/// - Use the arrow keys when it has focus. Scrolling over it scrolls the page unless
+///   `scrollAdjusts` is on.
 /// - Double-click the knob to reset to the default.
 /// - Click the value to type an exact one (Return or clicking away commits, Escape cancels).
 public struct VoltaKnob: View {
@@ -14,11 +15,11 @@ public struct VoltaKnob: View {
     /// Shown instead of the value while disabled (e.g. "Host" when the tempo follows the host).
     var disabledText: String?
     /// Whether the scroll wheel changes the value while the pointer is over the knob.
-    /// Turn it off in scrolling views so scrolling the page over a knob doesn't move it.
+    /// Off by default, so scrolling a view over a knob scrolls the view instead of moving the knob.
     var scrollAdjusts: Bool
 
     public init(_ label: String, spec: KnobSpec, value: Binding<Double>, disabledText: String? = nil,
-                scrollAdjusts: Bool = true) {
+                scrollAdjusts: Bool = false) {
         self.label = label
         self.spec = spec
         self._value = value
