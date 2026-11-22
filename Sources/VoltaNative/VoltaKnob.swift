@@ -13,12 +13,17 @@ public struct VoltaKnob: View {
     @Binding var value: Double
     /// Shown instead of the value while disabled (e.g. "Host" when the tempo follows the host).
     var disabledText: String?
+    /// Whether the scroll wheel changes the value while the pointer is over the knob.
+    /// Turn it off in scrolling views so scrolling the page over a knob doesn't move it.
+    var scrollAdjusts: Bool
 
-    public init(_ label: String, spec: KnobSpec, value: Binding<Double>, disabledText: String? = nil) {
+    public init(_ label: String, spec: KnobSpec, value: Binding<Double>, disabledText: String? = nil,
+                scrollAdjusts: Bool = true) {
         self.label = label
         self.spec = spec
         self._value = value
         self.disabledText = disabledText
+        self.scrollAdjusts = scrollAdjusts
     }
 
     @Environment(\.isEnabled) private var isEnabled
@@ -144,7 +149,7 @@ public struct VoltaKnob: View {
     private func installScrollMonitor() {
         guard scrollMonitor == nil else { return }
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
-            guard isHovering, isEnabled, !isEditing else { return event }
+            guard scrollAdjusts, isHovering, isEnabled, !isEditing else { return event }
             let delta = event.scrollingDeltaY
             guard delta != 0 else { return nil }
             // Trackpads report many small precise deltas; wheels report whole lines.
